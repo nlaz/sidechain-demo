@@ -16,7 +16,7 @@ fi
 # Set variables
 MAIN_AUDIO="$1"
 SIDECHAIN_AUDIO="$2"
-OUTPUT_AUDIO="output_$(basename "$MAIN_AUDIO")"
+OUTPUT_AUDIO="output_$(basename "${MAIN_AUDIO%.*}").mp3"
 
 # Compression parameters
 THRESHOLD=0.01
@@ -25,11 +25,11 @@ ATTACK=5
 RELEASE=300
 
 # Run FFmpeg command
-ffmpeg -re -i "$MAIN_AUDIO" -i "$SIDECHAIN_AUDIO" \
+ffmpeg -i "$MAIN_AUDIO" -i "$SIDECHAIN_AUDIO" \
 -filter_complex "\
-[1:a]asplit=2[sc][mix]; \
-[0:a][sc]sidechaincompress=threshold=$THRESHOLD:ratio=$RATIO:attack=$ATTACK:release=$RELEASE[compressed]; \
-[compressed][mix]amix=weights=1 1" \
-"$OUTPUT_AUDIO"
+[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[main]; \
+[1:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo,apad[sc]; \
+[main][sc]sidechaincompress=threshold=$THRESHOLD:ratio=$RATIO:attack=$ATTACK:release=$RELEASE[compressed]" \
+-map "[compressed]" -c:a libmp3lame -q:a 2 "$OUTPUT_AUDIO"
 
 echo "Sidechain compression complete. Output saved as $OUTPUT_AUDIO"
